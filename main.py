@@ -16,37 +16,48 @@ class CastBody:
     text: str
 
 
-def read_header(file: TextIO) -> CastHeader:
-    data: dict[str, Any] = json.loads(file.readline())
+def read_header(path: str | Path) -> CastHeader:
+    with open(path, "r") as f:
+        data: dict[str, Any] = json.loads(f.readline())
 
-    for key in {"version", "width", "height"}:
-        if key not in data:
-            raise ValueError("Invalid file: could not find required param")
+        for key in {"version", "width", "height"}:
+            if key not in data:
+                raise ValueError("Invalid file: could not find required param")
 
-    assert data["version"] == 2
-    return CastHeader(width=data["width"], height=data["height"])
+        assert data["version"] == 2
+        return CastHeader(width=data["width"], height=data["height"])
 
 
-def read_body(file: TextIO) -> Generator[CastBody, None, None]:
-    for line in file:
-        data: list = json.loads(line)
-        assert len(data) == 3
+def read_body(path: str | Path) -> Generator[CastBody, None, None]:
+    with open(path, "r") as f:
+        f.readline()
+        for line in f:
+            data: list = json.loads(line)
+            assert len(data) == 3
 
-        time, type_, text = data
-        assert isinstance(time, float)
-        assert isinstance(type_, str)
-        assert isinstance(text, str)
+            time, type_, text = data
+            assert isinstance(time, float)
+            assert isinstance(type_, str)
+            assert isinstance(text, str)
 
-        assert type_ == "o"
+            assert type_ == "o"
 
-        yield CastBody(time, text)
+            yield CastBody(time, text)
+
+
+def read_cast(
+    path: str | Path,
+) -> tuple[CastHeader, Generator[CastBody, None, None]]:
+    return read_header(path), read_body(path)
 
 
 def main():
     case_file = Path("./.recordings/16-05-2026_18-31-55.cast")
-    with open(case_file, "r") as f:
-        header = read_header(f)
-        print(header)
+    header, body_stream = read_cast(case_file)
+
+    print(header)
+    for body in body_stream:
+        print(body)
 
 
 if __name__ == "__main__":

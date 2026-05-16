@@ -3,7 +3,7 @@ from typing import Any, Generator
 from pathlib import Path
 import json
 
-import libvterm
+from terminal import Terminal
 
 
 @dataclass(frozen=True)
@@ -57,9 +57,9 @@ def main():
     case_file = Path("./.recordings/16-05-2026_18-31-55.cast")
     header, body_stream = read_cast(case_file)
 
-    vt = libvterm.vterm_new(header.height, header.width)
-    for body in body_stream:
-        print(body)
+    with Terminal(header.height, header.width) as term:
+        for body in body_stream:
+            term.feed(body.text)
 
 
 if __name__ == "__main__":

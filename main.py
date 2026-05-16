@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, TextIO
+from typing import Any, Generator, TextIO
 from pathlib import Path
 import json
 
@@ -8,6 +8,12 @@ import json
 class CastHeader:
     width: int
     height: int
+
+
+@dataclass(frozen=True)
+class CastBody:
+    time: float
+    text: str
 
 
 def read_header(file: TextIO) -> CastHeader:
@@ -19,6 +25,21 @@ def read_header(file: TextIO) -> CastHeader:
 
     assert data["version"] == 2
     return CastHeader(width=data["width"], height=data["height"])
+
+
+def read_body(file: TextIO) -> Generator[CastBody, None, None]:
+    for line in file:
+        data: list = json.loads(line)
+        assert len(data) == 3
+
+        time, type_, text = data
+        assert isinstance(time, float)
+        assert isinstance(type_, str)
+        assert isinstance(text, str)
+
+        assert type_ == "o"
+
+        yield CastBody(time, text)
 
 
 def main():

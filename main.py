@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-from typing import Any, Generator, TextIO
+from typing import Any, Generator
 from pathlib import Path
 import json
+
+import libvterm
 
 
 @dataclass(frozen=True)
@@ -55,7 +57,7 @@ def main():
     case_file = Path("./.recordings/16-05-2026_18-31-55.cast")
     header, body_stream = read_cast(case_file)
 
-    print(header)
+    vt = libvterm.vterm_new(header.height, header.width)
     for body in body_stream:
         print(body)
 

@@ -37,6 +37,6 @@ class TerminalRenderer:
             x = cell.col * self.cell_width
             y = cell.row * self.cell_height
 
-            draw.text((x, y), cell.char, "white")
+            draw.text((x, y), cell.char, "white", font=self.font)
 
         return frame

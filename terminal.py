@@ -1,5 +1,13 @@
+from ctypes import byref
+from dataclasses import dataclass
 from typing import Self
+
 import libvterm as _vt
+
+
+@dataclass(frozen=True)
+class Cell:
+    char: str
 
 
 class Terminal:
@@ -45,3 +53,21 @@ class Terminal:
         data = text.encode("utf-8")
         _vt.vterm_input_write(self._vt, data, len(data))
         _vt.vterm_screen_flush_damage(self._screen)
+
+    def cell(self, row: int, col: int) -> Cell:
+        self._ensure_open()
+
+        pos = _vt.VTermPos(row=row, col=col)
+        raw_cell = _vt.VTermScreenCell()
+
+        _vt.vterm_screen_get_cell(
+            self._screen,
+            pos,
+            byref(raw_cell),
+        )
+
+        codepoint = raw_cell.chars[0]
+        char = chr(codepoint) if codepoint else " "
+        return Cell(
+            char=char,
+        )

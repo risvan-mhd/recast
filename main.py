@@ -64,7 +64,7 @@ def main():
     font_path = Path(
         "~/.fonts/JetBrainsMonoNerdFontMono-Regular.ttf"
     ).expanduser()
-    font = ImageFont.truetype(font_path, 16)
+    font = ImageFont.truetype(font_path, 20)
     fps = 30
 
     with Terminal(header.height, header.width) as term:

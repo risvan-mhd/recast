@@ -70,6 +70,7 @@ class Terminal:
         self._closed = False
 
         self._vt = _vt.vterm_new(rows, cols)
+        _vt.vterm_set_utf8(self._vt, 1)
         self._screen = _vt.vterm_obtain_screen(self._vt)
         _vt.vterm_screen_reset(self._screen, 1)
 
@@ -143,6 +144,26 @@ class Terminal:
             pos,
             byref(raw_cell),
         )
+
+        raw_chars_list = [raw_cell.chars[i] for i in range(6)]
+        # print(
+        #     f"DEBUG [{row},{col}]: width={getattr(raw_cell, 'width', 'N/A')}, raw_chars={raw_chars_list}"
+        # )
+
+        # import ctypes
+        #
+        # cell_address = ctypes.addressof(raw_cell)
+        # raw_bytes = ctypes.string_at(
+        #     cell_address, 24
+        # )  # read just the chars array bytes
+        #
+        # print("RAW BYTES IN MEMORY (HEX):", raw_bytes.hex())
+        #
+        # # 2. Let's see what integers Python actually pulls out of the array slots
+        # for i in range(6):
+        #     print(
+        #         f"Slot {i} integer: {raw_cell.chars[i]} (Hex: {hex(raw_cell.chars[i])})"
+        #     )
 
         fg = self._color(raw_cell.fg)
         bg = self._color(raw_cell.bg)

@@ -1,10 +1,11 @@
 from subprocess import DEVNULL, Popen, PIPE
 from dataclasses import dataclass
-from typing import Any, Generator
+from typing import Annotated, Any, Generator
 from pathlib import Path
 import json
 
 from PIL import ImageFont
+from rich.console import Console
 from rich.progress import (
     BarColumn,
     Progress,
@@ -12,6 +13,7 @@ from rich.progress import (
     TextColumn,
     TimeRemainingColumn,
 )
+import typer
 
 from terminal import Terminal
 from terminal_renderer import TerminalRenderer
@@ -27,6 +29,11 @@ class CastHeader:
 class CastBody:
     time: float
     text: str
+
+
+app = typer.Typer()
+console = Console()
+err_console = Console(stderr=True)
 
 
 def read_header(path: str | Path) -> tuple[CastHeader, int]:
@@ -64,11 +71,11 @@ def read_body(path: str | Path) -> Generator[tuple[CastBody, int], None, None]:
             yield CastBody(time, text), bytes_read
 
 
-def main():
-    cast_file = Path("./.recordings/16-05-2026_18-31-55.cast")
-    header, bytes_read = read_header(cast_file)
+def render(input_path: Path, output_path: Path) -> None:
+    # input_path = Path("./.recordings/16-05-2026_18-31-55.cast")
+    header, bytes_read = read_header(input_path)
 
-    file_size = cast_file.stat().st_size
+    file_size = input_path.stat().st_size
     total_render_bytes = file_size - bytes_read
 
     font_path = Path(
@@ -108,7 +115,7 @@ def main():
             "animation",
             "-pix_fmt",
             "yuv420p",
-            "output.mp4",
+            str(output_path),
         ]
         with Progress(
             TextColumn("[bold blue]🎬 Recast Rendering[/bold blue]"),
@@ -127,7 +134,7 @@ def main():
                 stdin=PIPE,
                 stdout=DEVNULL,
             ) as ffmpeg:
-                for body, bytes_read in read_body(cast_file):
+                for body, bytes_read in read_body(input_path):
                     term.feed(body.text)
                     frame = renderer.render()
 
@@ -136,5 +143,69 @@ def main():
                     progress.update(task_id, advance=bytes_read)
 
 
+def print_err(msg: str) -> None:
+    err_console.print(f"[bold red]Error:[/bold] {msg}")
+
+
+def render_file(input: Path, force: bool) -> None:
+    output = input.with_suffix(".mp4")
+    if output.exists():
+        if not output.is_file():
+            print_err(
+                f"output file already exists and is not a file. Path: {output.as_posix()!r}"
+            )
+            raise typer.Exit(1)
+
+        if not force:
+            typer.confirm(
+                f"Output path {output.as_posix()!r} already exists. Overwrite?",
+                abort=True,
+            )
+
+    console.print(
+        f"[blue]Rendering {input.as_posix()!r} to {output.as_posix()!r}[/blue]"
+    )
+    render(input, output)
+    console.print(
+        f"[bold green]Rendered[/bold] {input.as_posix()!r} to {output.as_posix()!r}[green]"
+    )
+
+
+def render_dir(input: Path, force: bool) -> None:
+    console.print(f"[bold blue]Rendering from {input.as_posix()!r}[/bold bluw]")
+    for file in input.iterdir():
+        if not file.is_file():
+            continue
+
+        output = file.with_suffix(".mp4")
+        if output.exists() and output.is_file():
+            console.print(
+                f"Output file for {file.as_posix()!r} already exists. Path: {output.as_posix()!r}"
+            )
+            console.print(
+                f"[bold blue]Skipping[/bold] {output.as_posix()!r}[/blue]"
+            )
+            continue
+
+        render_file(file, force)
+
+
+@app.command()
+def main(
+    input: Annotated[
+        Path,
+        typer.Argument(
+            resolve_path=True, exists=True, file_okay=True, dir_okay=True
+        ),
+    ],
+    force: Annotated[bool, typer.Option("--force", "-f")] = False,
+) -> None:
+    if input.is_file():
+        render_file(input, force)
+        return
+
+    render_dir(input, force)
+
+
 if __name__ == "__main__":
-    main()
+    app()

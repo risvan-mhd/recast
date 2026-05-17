@@ -75,8 +75,7 @@ class Terminal:
             byref(raw_cell),
         )
 
-        codepoint = raw_cell.chars[0]
-        char = chr(codepoint) if codepoint else " "
+        char = "".join(chr(cp) for cp in raw_cell.chars if cp != 0) or " "
         return Cell(
             row=row,
             col=col,

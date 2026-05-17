@@ -34,6 +34,9 @@ class TerminalRenderer:
         frame = self.frame.copy()
         draw = ImageDraw.Draw(frame)
         for cell in self.term:
+            if cell.char == " ":
+                continue
+
             x = cell.col * self.cell_width
             y = cell.row * self.cell_height
 

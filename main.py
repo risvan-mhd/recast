@@ -89,6 +89,12 @@ def main():
                 # output
                 "-c:v",
                 "libx264",
+                "-crf",
+                "16",
+                "-preset",
+                "veryfast",
+                "-tune",
+                "animation",
                 "-pix_fmt",
                 "yuv420p",
                 "output.mp4",

@@ -1,12 +1,15 @@
-from ctypes import byref
 from dataclasses import dataclass
-from typing import Self
+from typing import Generator, Self
+from ctypes import byref
 
 import libvterm as _vt
 
 
 @dataclass(frozen=True)
 class Cell:
+    row: int
+    col: int
+
     char: str
 
 
@@ -57,6 +60,12 @@ class Terminal:
     def cell(self, row: int, col: int) -> Cell:
         self._ensure_open()
 
+        if not (0 <= row < self.rows):
+            raise IndexError(f"row out of range: {row}")
+
+        if not (0 <= col < self.cols):
+            raise IndexError(f"col out of range: {col}")
+
         pos = _vt.VTermPos(row=row, col=col)
         raw_cell = _vt.VTermScreenCell()
 
@@ -69,5 +78,14 @@ class Terminal:
         codepoint = raw_cell.chars[0]
         char = chr(codepoint) if codepoint else " "
         return Cell(
+            row=row,
+            col=col,
             char=char,
         )
+
+    def __iter__(self) -> Generator[Cell, None, None]:
+        self._ensure_open()
+
+        for row in range(self.rows):
+            for col in range(self.cols):
+                yield self.cell(row, col)

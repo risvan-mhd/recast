@@ -61,9 +61,10 @@ def main():
         for body in body_stream:
             term.feed(body.text)
 
-            for row in range(term.rows):
-                for col in range(term.cols):
-                    print(term.cell(row, col))
+            for cell in term:
+                print(cell)
+
+            break
 
 
 if __name__ == "__main__":

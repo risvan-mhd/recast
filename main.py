@@ -1,9 +1,13 @@
+from subprocess import Popen, PIPE
 from dataclasses import dataclass
 from typing import Any, Generator
 from pathlib import Path
 import json
 
+from PIL import ImageFont
+
 from terminal import Terminal
+from terminal_renderer import TerminalRenderer
 
 
 @dataclass(frozen=True)
@@ -57,14 +61,46 @@ def main():
     case_file = Path("./.recordings/16-05-2026_18-31-55.cast")
     header, body_stream = read_cast(case_file)
 
+    font_path = Path(
+        "~/.fonts/JetBrainsMonoNerdFontMono-Regular.ttf"
+    ).expanduser()
+    font = ImageFont.truetype(font_path, 16)
+    fps = 30
+
     with Terminal(header.height, header.width) as term:
-        for body in body_stream:
-            term.feed(body.text)
+        renderer = TerminalRenderer(term, font)
+        with Popen(
+            [
+                "ffmpeg",
+                "-y",
+                # input
+                "-f",
+                "rawvideo",
+                "-vcodec",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "-s",
+                f"{renderer.width}x{renderer.height}",
+                "-r",
+                str(fps),
+                "-i",
+                "-",
+                # output
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "output.mp4",
+            ],
+            stdin=PIPE,
+        ) as ffmpeg:
+            for body in body_stream:
+                term.feed(body.text)
+                frame = renderer.render()
 
-            for cell in term:
-                print(cell)
-
-            break
+                assert ffmpeg.stdin
+                ffmpeg.stdin.write(frame.tobytes())
 
 
 if __name__ == "__main__":
